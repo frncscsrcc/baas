@@ -1,7 +1,6 @@
 package baas
 
 import (
-	"fmt"
 	"math/rand"
 )
 
@@ -10,16 +9,13 @@ type Deck struct {
 	briscola        Card // this is for semplicity the last Card
 	lastCardCounter int
 	playedCard      Card
-	players         [2]*Player
 }
 
-func NewDeck(player1 *Player, player2 *Player) *Deck {
+func NewDeck() *Deck {
 	seeds := []rune{'A', 'B', 'C', 'D'}
 	symbols := []rune{'2', '3', '4', '5', '6', '7', 'J', 'Q', 'K', 'A'}
 
 	var deck Deck
-	deck.players[0] = player1
-	deck.players[1] = player2
 
 	deck.lastCardCounter = 0
 	deck.playedCard = Card{}
@@ -55,38 +51,75 @@ func (d *Deck) GetBriscola() Card {
 	return d.briscola
 }
 
-func (d *Deck) GetWinner(card1 Card, card2 Card) (*Player, int, error) {
 
-	if card1.symbol == card2.symbol && card1.seed == card2.seed {
-		return nil, 0, NewError(1)
-	}
-
-	winnedId, totScore := getWinnerIndex(card1, card2, d.briscola)
-	return d.players[winnedId], totScore, nil
-
+func (d *Deck) GetWinner(card1 Card, card2 Card) (int, int, error) {
+	return findWinner(card1, card2, d.briscola)
 }
 
-func (d *Deck) GetCard(playerId string) error {
+// Separated from GetWinner because it is easier to test
+func findWinner(card1 Card, card2 Card, briscola Card) (int, int, error) {
+	if card1.symbol == card2.symbol && card1.seed == card2.seed {
+		return 0, 0, NewError(1)
+	}
+
+	var score1 int
+	var score2 int
+	var totScore int
+
+	score1 = symbolToScore[card1.symbol]
+	score2 = symbolToScore[card2.symbol]
+
+	totScore = score1 + score2
+
+	// When both cards has 0 score, the higest symbol wins
+	if score1 == 0 && score2 == 0 {
+		score1 = symbolToRelativeScore[card1.symbol]
+		score2 = symbolToRelativeScore[card2.symbol]
+	}
+
+	// No card is briscola
+	if card1.seed != briscola.seed && card2.seed != briscola.seed {
+		// First card decides seed
+		if card1.seed != card2.seed {
+			return 0, totScore, nil
+		}
+
+		// If seed is the same, highest score card wins
+		if score1 > score2 {
+			return 0, totScore, nil
+		}
+		return 1, totScore, nil
+	}
+	// Both cards are briscola,
+	if card1.seed == briscola.seed && card2.seed == briscola.seed {
+		// Highest score card wins
+		if score1 > score2 {
+			return 0, totScore, nil
+		}
+		return 1, totScore, nil
+	}
+
+	// One card is briscola
+	if card1.seed == briscola.seed {
+		return 0, totScore, nil
+	}
+	return 1, totScore, nil
+}
+
+func (d *Deck) GetCard() (Card, error) {
 	var card Card
 
-	playerIndex, err := d.getPlayerIndex(playerId)
-	if err != nil {
-		return err
+	if d.lastCardCounter >= 39 {
+		return Card{}, NewError(2)
 	}
 
-	player := d.players[playerIndex]
-
-	if d.lastCardCounter == 39 {
-		return NewError(2)
-	}
 	card = d.cards[d.lastCardCounter]
 	d.lastCardCounter++
 
-	player.cards = append(player.cards, card)
-
-	return nil
+	return card, nil
 }
 
+/*
 func (d *Deck) PlayCard(playerId string, card Card) error {
 
 	playerIndex, err := d.getPlayerIndex(playerId)
@@ -120,49 +153,6 @@ func (d *Deck) String() string {
 	return s
 }
 
-func getWinnerIndex(card1 Card, card2 Card, briscola Card) (index int, totScore int) {
-	var score1 int
-	var score2 int
-
-	score1 = symbolToScore[card1.symbol]
-	score2 = symbolToScore[card2.symbol]
-
-	totScore = score1 + score2
-
-	// When both cards has 0 score, the higest symbol wins
-	if score1 == 0 && score2 == 0 {
-		score1 = symbolToRelativeScore[card1.symbol]
-		score2 = symbolToRelativeScore[card2.symbol]
-	}
-
-	// No card is briscola
-	if card1.seed != briscola.seed && card2.seed != briscola.seed {
-		// First card decides seed
-		if card1.seed != card2.seed {
-			return 0, totScore
-		}
-
-		// If seed is the same, highest score card wins
-		if score1 > score2 {
-			return 0, totScore
-		}
-		return 1, totScore
-	}
-	// Both cards are briscola,
-	if card1.seed == briscola.seed && card2.seed == briscola.seed {
-		// Highest score card wins
-		if score1 > score2 {
-			return 0, totScore
-		}
-		return 1, totScore
-	}
-
-	// One card is briscola
-	if card1.seed == briscola.seed {
-		return 0, totScore
-	}
-	return 1, totScore
-}
 
 func (d *Deck) getPlayerIndex(playerId string) (int, error) {
 	if d.players[0].id == playerId {
@@ -173,3 +163,4 @@ func (d *Deck) getPlayerIndex(playerId string) (int, error) {
 	}
 	return 0, NewError(3)
 }
+*/

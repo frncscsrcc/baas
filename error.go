@@ -27,6 +27,10 @@ func NewError(code int) BaasError {
 	return errorMap[code]
 }
 
+func (e BaasError) GetCode() int {
+	return e.code
+}
+
 func (e BaasError) Error() string {
 	return fmt.Sprintf("ERROR %d, %s\n", e.code, e.message)
 }
